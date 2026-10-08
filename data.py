@@ -1,26 +1,9 @@
-"""Data layer: raw-data simulator (drop-in replaceable by real extracts) and a
-validated ingestion pipeline.
-
-Raw schema (replace the CSVs in ``data/raw`` with real extracts that follow it):
-
-    market_attributes.csv   market_id, log_pop, income_z, urban_index, comp_intensity, tier
-    market_adjacency.csv    market_id, neighbor_id                      (spillover network)
-    market_transactions.csv week_start, market_id, units_sold, avg_price, gross_revenue
-    competitor_telemetry.csv week_start, market_id, competitor_avg_price
-    pricing_events.csv      market_id, go_live_week_idx                 (dynamic-pricing launches)
-    _ground_truth.csv       SIMULATION ONLY: true unit-level effect, used for validation
-"""
 from __future__ import annotations
-
 import json
 from dataclasses import dataclass
-
 import numpy as np
 import pandas as pd
-
 from .config import CFG, Config
-
-
 # --------------------------------------------------------------------------
 # 1. Simulator
 # --------------------------------------------------------------------------
@@ -31,11 +14,8 @@ def _ar1(rng: np.random.Generator, n_units: int, n_t: int, rho: float, sd: float
     for t in range(1, n_t):
         out[:, t] = rho * out[:, t - 1] + eps[:, t]
     return out
-
-
 def simulate_raw(cfg: Config = CFG) -> dict:
     """Generate an interconnected-marketplace panel with a *known* causal effect.
-
     Design features that make naive A/B-style comparisons fail (and motivate the engine):
       * treatment adoption is confounded (urban, competitive, large markets adopt; timing
         is triggered by rising competitor prices),

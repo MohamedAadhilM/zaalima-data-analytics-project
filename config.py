@@ -1,12 +1,7 @@
-"""Central, typed configuration. Change values here, never inside analysis code."""
 from __future__ import annotations
-
 from dataclasses import dataclass, field
 from pathlib import Path
-
 ROOT = Path(__file__).resolve().parents[2]
-
-
 @dataclass(frozen=True)
 class Config:
     # ---- simulation / panel geometry -------------------------------------

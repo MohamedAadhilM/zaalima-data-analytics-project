@@ -1,0 +1,10 @@
+variable,observed,ancestor_of_treatment,ancestor_of_outcome,confounder
+comp_gap,True,True,True,True
+comp_gap_4w,True,True,True,True
+comp_intensity,True,True,True,True
+local_demand,False,True,True,True
+log_pop,True,True,True,True
+seasonality,True,True,True,True
+urban_index,True,True,True,True
+income_z,True,False,True,False
+neighbor_adoption,True,False,True,False

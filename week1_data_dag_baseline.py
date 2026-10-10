@@ -1,17 +1,4 @@
-# %% [markdown]
-# # Week 1 — Data Ingestion, Causal DAG & Pre-Treatment Baselines
-# **Project 1 · Causal Inference & Synthetic Control Engine for Algorithmic Pricing**
-#
-# | Day | Deliverable |
-# |---|---|
-# | 1 | Ingest regional transactions + competitor pricing telemetry; validated, cleaned panel |
-# | 2 | Exploratory analysis: rollout, covariate balance, why naive comparisons fail |
-# | 3 | Causal DAG (DoWhy): confounders, back-door identification |
-# | 4 | Treatment vs pre-treatment split; baseline trajectories & pre-trend diagnostics |
-# | 5 | Persist artefacts, Week-1 checkpoint |
-
-# %%
-import _bootstrap  # noqa: F401  (adds src/ to sys.path)
+import _bootstrap
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -24,25 +11,11 @@ from cpe.utils import setup_style, savefig, save_json
 setup_style()
 CFG.ensure_dirs()
 pd.options.display.float_format = "{:,.4f}".format
-
-# %% [markdown]
-# ## Day 1 — Ingestion & validation
-# The raw layer mimics three operational sources: weekly **market transactions**, **competitor price
-# telemetry** (with realistic dropouts, spikes and duplicate pings), and a **pricing-event log**.
-# To use real data, replace the CSVs in `data/raw/` (schema documented in `cpe/data.py`) and skip the simulator.
-
-# %%
 sim = simulate_raw(CFG)             # remove this line when using real extracts
 panel, report = ingest(CFG)
 print("Ingestion report")
 print(pd.Series(report.to_dict()).to_string())
 panel.head()
-
-# %% [markdown]
-# **Data-quality gates.** The pipeline fails fast on duplicate keys / non-positive values, de-duplicates
-# telemetry pings, removes spikes with a rolling-median Hampel filter and linearly interpolates dropouts.
-
-# %%
 assert report.panel_balanced, "panel must be balanced for the within transformation"
 quality = pd.DataFrame({
     "check": ["balanced panel", "duplicate telemetry rows removed", "missing competitor prices (interpolated)",
@@ -50,11 +23,6 @@ quality = pd.DataFrame({
     "value": [report.panel_balanced, report.duplicates_removed, report.missing_competitor_price,
               report.outliers_winsorised, report.n_markets, report.n_weeks]})
 quality
-
-# %% [markdown]
-# ## Day 2 — Exploratory analysis: why a plain A/B read-out fails here
-
-# %%
 treated = panel[panel.treated_unit == 1]
 golive = treated.groupby("market_id")["go_live"].first().sort_values()
 fig, ax = plt.subplots(1, 2, figsize=(12, 3.8))
@@ -68,12 +36,6 @@ ax[1].plot(g.index, g[1], label="eventually-treated markets")
 ax[1].set_title("Mean log revenue: groups differ in *level* before any treatment")
 ax[1].legend()
 plt.tight_layout(); savefig(fig, "w1_rollout_and_levels.png"); plt.show()
-
-# %% [markdown]
-# **Covariate balance** (standardised mean difference, treated vs never-treated markets). |SMD| > 0.25 = imbalance
-# → adoption is *not* random, so naive comparisons are confounded.
-
-# %%
 static = panel.drop_duplicates("market_id").set_index("market_id")
 cols = ["log_pop", "income_z", "urban_index", "comp_intensity"]
 t, c = static[static.treated_unit == 1][cols], static[static.treated_unit == 0][cols]
@@ -90,34 +52,12 @@ truth = panel[panel.dynamic_pricing == 1].merge(gt[["market_id", "true_tau_log"]
 print(f"Naive treated-vs-control 'lift'       : {naive:+.1%}  (log-points)")
 print(f"True average effect (simulation only) : {truth:+.1%}")
 print("→ the naive read-out is wildly biased because adopters are larger/urban markets.")
-
-# %% [markdown]
-# ## Day 3 — Causal DAG with DoWhy
-# The DAG encodes our *assumptions*: adoption is driven by market structure and by a smoothed competitor-price
-# signal; hidden local demand drives both competitor prices and revenue; neighbours' adoption spills over onto revenue.
-
-# %%
 G = dag.build_dag()
 fig = dag.plot_dag(G, CFG.fig_dir / "w1_causal_dag.png"); plt.show()
 dag.confounder_report(G)
-
-# %%
 model, estimand, adjustment_set = dag.identify(panel, G)
 print("Back-door adjustment set found by DoWhy:", adjustment_set)
 print(estimand)
-
-# %% [markdown]
-# **Reading the output.** The unobserved `local_demand` is a confounder only through `comp_gap`, which is
-# observed; conditioning on the competitor signal (`comp_gap` or its smoothed version `comp_gap_4w` —
-# DoWhy may return either; both are valid minimal back-door sets) blocks that path. This identification
-# claim is *untestable* from data — Week 3 stress-tests it with sensitivity analysis.
-
-# %% [markdown]
-# ## Day 4 — Treatment vs pre-treatment periods and baselines
-# For the focal market, history is split into three **non-overlapping** windows:
-# `train` (fit the synthetic control) → `validation` (blocked, out-of-sample pre-treatment check) → `post`.
-
-# %%
 primary = primary_market(CFG)
 T0 = CFG.primary_adoption_week
 windows = {"train": (0, CFG.train_end - 1), "validation": (CFG.train_end, T0 - 1), "post": (T0, CFG.n_weeks - 1)}
@@ -138,12 +78,6 @@ for k, (a, b) in windows.items():
 ax.axvline(T0, color="k", ls="--"); ax.set_ylabel("log revenue, demeaned (pre-period)")
 ax.set_title("Baseline trajectories: focal market vs donor pool"); ax.legend(loc="lower left")
 savefig(fig, "w1_baseline_trajectories.png"); plt.show()
-
-# %% [markdown]
-# **Pre-treatment diagnostics.** (1) Is the focal-vs-donor gap stationary before treatment (ADF)?
-# (2) Is there a differential pre-trend? (3) Strength of seasonality (STL).
-
-# %%
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.seasonal import STL
 
@@ -156,11 +90,6 @@ diag = pd.Series({"ADF statistic (gap)": adf_stat, "ADF p-value": adf_p,
                   "pre-trend slope (log-pts / week)": slope,
                   "seasonal strength (STL, 0-1)": seas_strength})
 print(diag.round(4).to_string())
-
-# %% [markdown]
-# ## Day 5 — Persist artefacts & Week-1 checkpoint
-
-# %%
 save_json({"primary": primary, "t0": T0, "windows": windows, "never_treated": never,
            "treated": sorted(treated.market_id.unique()), "adjustment_set": adjustment_set,
            "ingest_report": report.to_dict(), "naive_lift_log": naive, "diagnostics": diag.to_dict()},

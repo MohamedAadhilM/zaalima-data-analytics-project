@@ -1,0 +1,29 @@
+market_id,adjacent_to_focal,max_neighbor_exposure,status,reason
+R01,False,0.4,kept,clean donor
+R02,False,0.333,kept,clean donor
+R05,False,0.333,kept,clean donor
+R06,False,0.4,kept,clean donor
+R07,False,0.667,dropped,neighbour exposure >= 50%
+R08,False,0.667,dropped,neighbour exposure >= 50%
+R09,False,0.333,kept,clean donor
+R11,False,0.25,kept,clean donor
+R12,False,0.667,dropped,neighbour exposure >= 50%
+R13,False,0.333,kept,clean donor
+R14,True,0.5,dropped,adjacent to focal market + neighbour exposure >= 50%
+R15,False,0.25,kept,clean donor
+R16,False,0.5,dropped,neighbour exposure >= 50%
+R18,True,0.5,dropped,adjacent to focal market + neighbour exposure >= 50%
+R19,False,0.25,kept,clean donor
+R20,False,0.333,kept,clean donor
+R21,False,0.25,kept,clean donor
+R22,False,0.4,kept,clean donor
+R23,False,0.333,kept,clean donor
+R26,False,0.0,kept,clean donor
+R28,False,0.5,dropped,neighbour exposure >= 50%
+R30,False,0.333,kept,clean donor
+R31,False,0.667,dropped,neighbour exposure >= 50%
+R33,False,0.667,dropped,neighbour exposure >= 50%
+R34,False,0.4,kept,clean donor
+R36,False,0.333,kept,clean donor
+R37,False,0.0,kept,clean donor
+R38,False,0.0,kept,clean donor

@@ -1,0 +1,6 @@
+covariate,treated,synthetic,donor_avg,gap: synthetic,gap: donor avg
+income_z,0.4551,-0.3752,0.0381,0.8303,0.417
+urban_index,0.8785,0.3702,0.4016,0.5083,0.4769
+log_pop,12.8792,12.3204,12.1243,0.5588,0.7549
+comp_intensity,0.3925,0.4736,0.5573,0.0811,0.1648
+comp_gap_pre,0.0368,0.0113,0.0188,0.0255,0.0181

@@ -1,0 +1,6 @@
+metric,value
+selected lambda,0.001
+pre-treatment RMSPE (in-sample),0.02086499573300575
+validation RMSPE (out-of-sample),0.03164932889174932
+donors used,19.0
+donors with weight > 1%,15.0

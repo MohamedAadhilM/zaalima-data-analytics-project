@@ -1,0 +1,3 @@
+model,out_of_fold_R2
+outcome model E[Y|W],0.49531508585281936
+treatment model E[D|W],0.24134948513890264

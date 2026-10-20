@@ -1,0 +1,10 @@
+criterion,pass_rule,passed,evidence,status
+1. Causal DAG mapped and validated,Estimand identified by DoWhy; confounders listed; mediator excluded from adjustment,True,"7 confounder rows, 1 mediator; back-door estimand identified",PASS
+2a. Synthetic control matches pre-treatment path (in-sample),pre-treatment RMSPE <= 0.05 (≈5% error),True,RMSPE 0.0209,PASS
+2b. Synthetic control matches on weeks it never saw,validation RMSPE <= 0.05,True,RMSPE 0.0316,PASS
+2c. No drift on held-out pre-treatment weeks,"average gap over the validation window within ±0.01 log-points (the full-pre average is zero by construction, so it is not used)",False,validation-window average gap -0.0127,REVIEW
+2d. Weights are spread across donors (not one-donor reliance),>= 5 donors with weight > 1%,True,15 donors > 1%,PASS
+3a. SCM effect estimator functioning,finite post-treatment gap with the expected sign (positive),True,gap +0.0349 log-pts (+3.5%),PASS
+3b. DML effect estimator functioning,"finite estimate, 95% interval excludes zero",True,θ +0.0260 (CI +0.006 to +0.045),PASS
+3c. DML has usable overlap,treatment-model out-of-fold R² < 0.9 (adoption not perfectly predictable),True,R² 0.24,PASS
+3d. The two estimators agree on direction,SCM gap and DML θ share the same sign,True,SCM +0.035 vs DML +0.026,PASS

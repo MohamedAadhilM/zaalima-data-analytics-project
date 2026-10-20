@@ -1,0 +1,32 @@
+Adjustment set (back-door): comp_gap, comp_intensity, log_pop, urban_index
+
+Estimand type: EstimandType.NONPARAMETRIC_ATE
+
+### Estimand : 1
+Estimand name: backdoor
+Estimand expression:
+        d                                                                     
+──────────────────(E[log_revenue|urban_index,comp_intensity,log_pop,comp_gap])
+d[dynamic_pricing]                                                            
+Estimand assumption 1, Unconfoundedness: If U→{dynamic_pricing} and U→log_revenue then P(log_revenue|dynamic_pricing,urban_index,comp_intensity,log_pop,comp_gap,U) = P(log_revenue|dynamic_pricing,urban_index,comp_intensity,log_pop,comp_gap)
+
+### Estimand : 2
+Estimand name: iv
+No such variable(s) found!
+
+### Estimand : 3
+Estimand name: frontdoor
+No such variable(s) found!
+
+### Estimand : 4
+Estimand name: general_adjustment
+Estimand expression:
+        d                                                                      ↪
+──────────────────(E[log_revenue|log_pop,urban_index,comp_intensity,comp_gap_4 ↪
+d[dynamic_pricing]                                                             ↪
+
+↪    
+↪ w])
+↪    
+Estimand assumption 1, Unconfoundedness: If U→{dynamic_pricing} and U→log_revenue then P(log_revenue|dynamic_pricing,log_pop,urban_index,comp_intensity,comp_gap_4w,U) = P(log_revenue|dynamic_pricing,log_pop,urban_index,comp_intensity,comp_gap_4w)
+

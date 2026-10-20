@@ -1,10 +1,11 @@
-variable,observed,ancestor_of_treatment,ancestor_of_outcome,confounder
-comp_gap,True,True,True,True
-comp_gap_4w,True,True,True,True
-comp_intensity,True,True,True,True
-local_demand,False,True,True,True
-log_pop,True,True,True,True
-seasonality,True,True,True,True
-urban_index,True,True,True,True
-income_z,True,False,True,False
-neighbor_adoption,True,False,True,False
+variable,observed,role,ancestor_of_treatment,ancestor_of_outcome,descendant_of_treatment
+urban_index,True,confounder (adjust),True,True,False
+log_pop,True,confounder (adjust),True,True,False
+comp_intensity,True,confounder (adjust),True,True,False
+comp_gap,True,confounder (adjust),True,True,False
+seasonality,True,confounder (adjust),True,True,False
+comp_gap_4w,True,confounder (adjust),True,True,False
+local_demand,False,confounder (UNOBSERVED - cannot adjust),True,True,False
+income_z,True,outcome-only cause (precision control),False,True,False
+neighbor_adoption,True,outcome-only cause (precision control),False,True,False
+log_price,True,mediator (do not adjust),False,True,True

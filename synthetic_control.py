@@ -4,7 +4,8 @@
   * ridge-penalised weights (Abadie & L'Hour) whose strength is chosen by *blocked
     out-of-sample* validation MSPE (train window -> validation window), which prevents the
     single-donor over-fit that unpenalised SCM exhibits on short, noisy pre-periods,
-  * (Day 3+ adds placebo inference, leave-one-donor-out and rolling-origin CV.)
+  * spillover-aware donor screening (SUTVA),
+  * placebo-in-space / placebo-in-time inference, leave-one-donor-out, rolling-origin CV.
 
 All outcome modelling is done on log revenue; counterfactual revenue is exp() of the
 synthetic log-path with a small Jensen correction from the pre-period residual variance.
@@ -180,3 +181,66 @@ def balance_table(panel: pd.DataFrame, res: SCMResult) -> pd.DataFrame:
         "synthetic": (st.loc[w.index, cols].mul(w, axis=0)).sum(),
         "donor_avg": st.loc[res.donors, cols].mean(),
     })
+
+
+# --------------------------------------------------------------------------
+# inference & robustness
+# --------------------------------------------------------------------------
+def placebo_in_space(panel: pd.DataFrame, base: SCMResult, train_end: int,
+                     max_pre_ratio: float = 2.0) -> pd.DataFrame:
+    """Permutation inference: re-assign 'treatment' to every donor (lambda held fixed)."""
+    rows, gaps = [], {}
+    for j in base.donors:
+        pool = [d for d in base.donors if d != j]
+        r = fit_scm(panel, j, pool, base.t0, train_end, lam=base.lam)
+        rows.append({"market_id": j, "rmspe_pre": r.rmspe_pre, "rmspe_post": r.rmspe_post,
+                     "ratio": r.ratio, "att_log": r.att_log})
+        gaps[j] = r.gap
+    tab = pd.DataFrame(rows)
+    tab.attrs["gaps"] = pd.DataFrame(gaps)
+    keep = tab[tab.rmspe_pre <= max_pre_ratio * base.rmspe_pre]
+    tab.attrs["p_ratio"] = float((1 + (keep.ratio >= base.ratio).sum()) / (1 + len(keep)))
+    tab.attrs["p_att_two_sided"] = float(
+        (1 + (keep.att_log.abs() >= abs(base.att_log)).sum()) / (1 + len(keep)))
+    tab.attrs["n_kept"] = len(keep)
+    return tab
+
+
+def placebo_in_time(panel: pd.DataFrame, base: SCMResult, shifts=(6, 10, 14)) -> pd.DataFrame:
+    """Pretend adoption happened `s` weeks earlier; there should be no 'effect'."""
+    rows = []
+    for s in shifts:
+        fake = base.t0 - s
+        r = fit_scm(panel, base.treated, base.donors, fake, train_end=int(fake * 0.7), lam=base.lam)
+        win = slice(fake, base.t0)
+        rows.append({"shift_weeks": s, "fake_t0": fake,
+                     "placebo_att_log": float(r.gap.loc[win].mean()),
+                     "true_att_log": base.att_log})
+    return pd.DataFrame(rows)
+
+
+def leave_one_donor_out(panel: pd.DataFrame, base: SCMResult, train_end: int, top: int = 5) -> pd.DataFrame:
+    rows = []
+    for d in base.weights.index[:top]:
+        pool = [x for x in base.donors if x != d]
+        r = fit_scm(panel, base.treated, pool, base.t0, train_end, lam=base.lam)
+        rows.append({"dropped_donor": d, "weight_dropped": base.weights[d],
+                     "att_log": r.att_log, "att_pct": r.att_pct, "rmspe_pre": r.rmspe_pre})
+    return pd.DataFrame(rows)
+
+
+def rolling_origin_cv(panel: pd.DataFrame, treated: str, donors: list[str], t0: int, lam: float,
+                      cutoffs=(36, 44, 52, 60), horizon: int = 8) -> pd.DataFrame:
+    """Time-series cross-validation of the SC predictive fit: fit on weeks < c, forecast
+    [c, c+h) - no future information leaks into the weights."""
+    Y = outcome_matrix(panel)
+    rows = []
+    for c in cutoffs:
+        if c + horizon > t0:
+            continue
+        Yd = Y - Y.iloc[:c].mean()
+        w = solve_weights(Yd[treated].to_numpy()[:c], Yd[donors].to_numpy()[:c], lam)
+        yhat = Yd[donors].to_numpy()[c:c + horizon] @ w
+        rows.append({"cutoff_week": c, "horizon": horizon,
+                     "oos_rmspe": rmspe(Yd[treated].to_numpy()[c:c + horizon], yhat)})
+    return pd.DataFrame(rows)

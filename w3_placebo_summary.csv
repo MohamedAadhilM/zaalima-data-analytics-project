@@ -1,0 +1,6 @@
+metric,value
+focal gap (log-pts),0.0348541043651724
+focal post/pre RMSPE ratio,1.8302559939131766
+placebos kept (comparable pre-fit),19.0
+permutation p-value (|gap|),0.05
+permutation p-value (RMSPE ratio),0.1

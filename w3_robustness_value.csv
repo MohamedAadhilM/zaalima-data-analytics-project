@@ -1,0 +1,5 @@
+metric,value
+t-statistic,2.6042092184038905
+partial R² of treatment with outcome,0.0016378321311636282
+RV: confounder strength to erase the estimate,0.0396913666158941
+RV (5%): strength to make it insignificant,0.009957393215116241

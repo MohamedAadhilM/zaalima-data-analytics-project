@@ -28,6 +28,8 @@ EDGES = [
     ("seasonality", OUTCOME), ("seasonality", "comp_gap"),
     # network spillover: neighbours' adoption lifts our demand
     ("urban_index", "neighbor_adoption"), ("neighbor_adoption", OUTCOME),
+    # mechanism: dynamic pricing works THROUGH the realised price (mediator - never adjust for it)
+    (TREATMENT, "log_price"), ("log_price", OUTCOME),
     # the causal effect of interest
     (TREATMENT, OUTCOME),
 ]
@@ -37,6 +39,7 @@ POS = {  # hand-tuned layout for the figure
     "income_z": (0, 4), "log_pop": (0, 3), "urban_index": (0, 2), "comp_intensity": (0, 1),
     "seasonality": (0, 0), "neighbor_adoption": (2, 5), "local_demand": (2, -1),
     "comp_gap": (2, 1), "comp_gap_4w": (3.3, 1.8), TREATMENT: (4.6, 2.6), OUTCOME: (6.4, 2.6),
+    "log_price": (5.5, 4.0),
 }
 
 
@@ -97,14 +100,31 @@ def identify(df: pd.DataFrame, g: nx.DiGraph | None = None):
 
 
 def confounder_report(g: nx.DiGraph) -> pd.DataFrame:
-    """Tabulate every common cause of treatment and outcome (back-door candidates)."""
+    """Classify every variable by its causal role relative to treatment -> outcome.
+
+    * confounder : causes treatment AND outcome, and is not downstream of treatment  -> ADJUST
+    * mediator   : downstream of treatment and upstream of outcome                    -> DO NOT adjust
+    * outcome-only / other                                                            -> optional precision control
+    """
+    desc_t = nx.descendants(g, TREATMENT)
+    anc_t, anc_y = nx.ancestors(g, TREATMENT), nx.ancestors(g, OUTCOME)
     rows = []
     for n in g.nodes:
         if n in (TREATMENT, OUTCOME):
             continue
-        causes_t = n in nx.ancestors(g, TREATMENT)
-        causes_y = n in nx.ancestors(g, OUTCOME) and nx.has_path(g, n, OUTCOME)
-        rows.append({"variable": n, "observed": n not in UNOBSERVED,
-                     "ancestor_of_treatment": causes_t, "ancestor_of_outcome": causes_y,
-                     "confounder": causes_t and causes_y})
-    return pd.DataFrame(rows).sort_values(["confounder", "variable"], ascending=[False, True])
+        if n in desc_t and n in anc_y:
+            role = "mediator (do not adjust)"
+        elif n in anc_t and n in anc_y:
+            role = "confounder (adjust)" if n not in UNOBSERVED else "confounder (UNOBSERVED - cannot adjust)"
+        elif n in anc_t:
+            role = "treatment-only cause (instrument-like)"
+        elif n in anc_y:
+            role = "outcome-only cause (precision control)"
+        else:
+            role = "other"
+        rows.append({"variable": n, "observed": n not in UNOBSERVED, "role": role,
+                     "ancestor_of_treatment": n in anc_t, "ancestor_of_outcome": n in anc_y,
+                     "descendant_of_treatment": n in desc_t})
+    order = {"confounder (adjust)": 0, "confounder (UNOBSERVED - cannot adjust)": 1, "mediator (do not adjust)": 2}
+    out = pd.DataFrame(rows)
+    return out.sort_values("role", key=lambda c: c.map(order).fillna(2)).reset_index(drop=True)

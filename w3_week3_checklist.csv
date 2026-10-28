@@ -1,0 +1,10 @@
+criterion,pass_rule,passed,evidence,status
+Quantify impact: ATE,causal estimators agree in sign and sit far from the naive read-out,True,causal ATE +0.026 to +0.033 vs naive +0.591,PASS
+Quantify impact: CATE,segment effects differ and at least one segment excludes zero,True,low income -0.8%; mid income +3.5%; high income +8.2%,PASS
+Sensitivity: placebo-in-time,all fake-launch gaps smaller than the real gap,True,fake gaps -0.013 to +0.007,PASS
+Sensitivity: leave-one-donor-out,gap stays within ±0.01 of the full-pool gap,True,gap +0.033 to +0.037,PASS
+Sensitivity: permutation test,p-value <= 0.10,True,p = 0.05 (19 placebos),PASS
+Sensitivity: placebo-treatment refuter,shuffled treatment gives ~0 effect,True,-0.0001 vs +0.0254,PASS
+Sensitivity: hidden-confounder strength,robustness value >= 5%,False,RV 4.0%,REVIEW
+Cross-validation: DML folds,effect positive in a clear majority of held-out folds,True,"4 of 5 folds positive, sd 0.025",PASS
+Cross-validation: SCM rolling origin,forecast error below the focal gap,True,error 0.029 vs gap 0.035,PASS

@@ -1,0 +1,6 @@
+check,passed
+No price change -> no revenue change,True
+Observed uplift reproduces the estimated effect,True
+Weeks before go-live are untouched,True
+Bigger uplift -> bigger effect (positive-effect segment),True
+Phase-in is slower than instant roll-out,True

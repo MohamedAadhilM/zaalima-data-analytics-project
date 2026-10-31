@@ -1,0 +1,8 @@
+test,passed,detail
+App renders with no exception,True,-
+Six tabs present,True,6 tabs
+Overview shows four headline metrics,True,-
+0% price change gives a 0% effect,True,effect = +0.0%
+Changing the price slider changes the effect,True,+7.9% -> +11.8%
+Switching segment changes the effect,True,+11.8% -> -1.1%
+No exception after interactions,True,-

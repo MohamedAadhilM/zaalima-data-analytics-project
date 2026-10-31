@@ -1,0 +1,9 @@
+metric,value
+Revenue lift (synthetic control),+3.5%
+Cumulative incremental revenue,"305,225"
+DML average effect,+2.6%
+Placebo permutation p-value,0.05
+Pre-treatment RMSPE (in-sample),0.021
+Blocked out-of-sample RMSPE,0.032
+Effect on revenue,+7.9%
+Incremental revenue (window),"681,016"

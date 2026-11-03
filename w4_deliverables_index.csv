@@ -1,0 +1,23 @@
+week,deliverable,path,exists
+Week 1,"Cleaned, merged panel",data/processed/panel.csv,True
+Week 1,Data-quality / ingestion report,data/processed/ingest_report.json,True
+Week 1,Causal DAG figure,reports/figures/w1_causal_dag.png,True
+Week 1,Confounder / mediator table,results/w1_confounders.csv,True
+Week 1,DoWhy identified estimand,results/w1_estimand.txt,True
+Week 1,Baseline trajectories figure,reports/figures/w1_baseline_trajectories.png,True
+Week 2,Donor pool,results/w2_donor_pool.csv,True
+Week 2,Synthetic control weights,results/w2_scm_weights.csv,True
+Week 2,MSPE validation table,results/w2_mspe_table.csv,True
+Week 2,DML results,results/w2_dml_results.csv,True
+Week 2,Mid-project review,reports/w2_midproject_review.md,True
+Week 3,ATE estimator table,results/w3_ate_table.csv,True
+Week 3,CATE by segment,results/w3_cate_by_segment.csv,True
+Week 3,Placebo / robustness results,results/w3_placebo_summary.csv,True
+Week 3,Sensitivity (robustness value),results/w3_robustness_value.csv,True
+Week 3,Cross-validation results,results/w3_cv_folds.csv,True
+Week 3,Week 3 summary,reports/w3_week3_summary.md,True
+Week 4,Counterfactual diagnostic figure,reports/figures/w4_actual_vs_counterfactual.png,True
+Week 4,What-if scenario table,results/w4_whatif_table.csv,True
+Week 4,Dashboard app,app/streamlit_app.py,True
+Week 4,Dashboard smoke-test results,results/w4_dashboard_smoke_test.csv,True
+Week 4,Executive causal analysis report,reports/executive_causal_report.md,True

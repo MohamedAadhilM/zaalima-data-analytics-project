@@ -1,0 +1,17 @@
+OK   week1_data_dag_baseline.py                          4.8s
+OK   week2_day1_donor_pool.py                            0.9s
+OK   week2_day2_synthetic_control.py                     1.7s
+OK   week2_day3_mspe_validation.py                       1.6s
+OK   week2_day4_double_ml.py                             4.4s
+OK   week2_day5_midproject_review.py                     0.9s
+OK   week3_day1_ate_estimators.py                        4.7s
+OK   week3_day2_cate_segments.py                         4.5s
+OK   week3_day3_scm_inference.py                         2.4s
+OK   week3_day4_sensitivity.py                           8.9s
+OK   week3_day5_cross_validation.py                      3.1s
+OK   week4_day1_counterfactual_diagnostics.py            1.6s
+OK   week4_day2_whatif_engine.py                         0.9s
+OK   week4_day3_dashboard_smoke_test.py                  1.4s
+OK   week4_day4_executive_report.py                      0.4s
+OK   week4_day5_final_review.py                          0.4s
+OK   pytest: 7 passed in 3.40s

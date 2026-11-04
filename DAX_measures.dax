@@ -1,0 +1,157 @@
+// =====================================================================================
+// DAX — Causal Pricing Simulator.  Create an empty table "_Measures" (Home > Enter data, one blank column,
+// then hide the column) and add every measure below to it.  Set the display folder named in each header.
+// MODEL RELATIONSHIPS (all single direction, one-to-many):
+//   DimDate[week_idx]       1 -> *  FactMarketWeek[week_idx]
+//   DimDate[week_idx]       1 -> *  FactCounterfactual[week_idx]
+//   DimDate[week_idx]       1 -> *  FactPlacebo[week_idx]
+//   DimMarket[market_id]    1 -> *  FactMarketWeek[market_id]
+//   DimMarket[market_id]    1 -> *  FactPlacebo[market_id]
+//   SegmentEffect[income_tercile] 1 -> * DimMarket[income_segment]
+//   Estimators, Summary, MspeFit, PlaceboInTime, LeaveOneOut, Refuters, CvFolds, RollingCv,
+//   RobustnessValue, OvbGrid, WhatIfGrid, ReviewChecklist, DataQuality, CateMarket: NO relationships (stand-alone).
+// Mark DimDate as a date table is NOT needed (week_idx is the key); sort DimDate[month_name] by [month_num].
+// =====================================================================================
+
+// ======================= PARAMETER TABLES (Modeling > New table) =====================
+ParamUplift = GENERATESERIES ( 0, 0.20, 0.01 )          // column [Value] renamed to [Uplift]
+ParamGoLive = GENERATESERIES ( 1, 100, 1 )              // rename column to [Week]
+ParamRamp   = GENERATESERIES ( 0, 12, 1 )               // rename column to [Weeks]
+
+// ======================= 1 · CORE (folder: 1 Core) ===================================
+Total Revenue  = SUM ( FactMarketWeek[gross_revenue] )
+Total Units    = SUM ( FactMarketWeek[units_sold] )
+Avg Price      = DIVIDE ( [Total Revenue], [Total Units] )
+Markets        = DISTINCTCOUNT ( FactMarketWeek[market_id] )
+Adopting Markets = CALCULATE ( DISTINCTCOUNT ( DimMarket[market_id] ), DimMarket[treated_unit] = 1 )
+Revenue Index =
+    VAR base = CALCULATE ( [Total Revenue], FILTER ( ALL ( DimDate[week_idx] ), DimDate[week_idx] = 0 ) )
+    RETURN DIVIDE ( [Total Revenue], base ) * 100
+Neighbour Adoption Share = AVERAGE ( FactMarketWeek[neighbor_adoption] )
+Competitor Price Gap % = AVERAGE ( FactMarketWeek[comp_gap] )
+
+// ======================= 2 · FOCAL MARKET COUNTERFACTUAL (folder: 2 Counterfactual) ==
+Focal Market      = SELECTEDVALUE ( Summary[primary] )
+Focal Go-Live Week = MAX ( Summary[t0] )
+Actual Revenue    = SUM ( FactCounterfactual[actual] )
+Counterfactual Revenue = SUM ( FactCounterfactual[counterfactual] )
+Incremental Revenue = [Actual Revenue] - [Counterfactual Revenue]
+Post Actual       = CALCULATE ( [Actual Revenue], FactCounterfactual[is_post] = TRUE () )
+Post Counterfactual = CALCULATE ( [Counterfactual Revenue], FactCounterfactual[is_post] = TRUE () )
+Post Incremental  = CALCULATE ( [Incremental Revenue], FactCounterfactual[is_post] = TRUE () )
+Revenue Lift %    = DIVIDE ( [Post Actual], [Post Counterfactual] ) - 1
+Cumulative Incremental =
+    VAR w = MAX ( DimDate[week_idx] )
+    RETURN
+        IF (
+            w < [Focal Go-Live Week], BLANK (),
+            CALCULATE (
+                [Incremental Revenue],
+                FILTER ( ALLSELECTED ( DimDate[week_idx] ),
+                         DimDate[week_idx] >= [Focal Go-Live Week] && DimDate[week_idx] <= w )
+            )
+        )
+Gap (log-points) = AVERAGE ( FactCounterfactual[gap_log] )
+Pre-period Gap (validation) =
+    CALCULATE ( AVERAGE ( FactCounterfactual[gap_log] ),
+                FILTER ( ALL ( DimDate[week_idx] ), DimDate[week_idx] >= 52 && DimDate[week_idx] < [Focal Go-Live Week] ) )
+
+// ======================= 3 · MODEL FIT & HEADLINE ESTIMATES (folder: 3 Estimates) =====
+DML Lift %        = EXP ( MAX ( Summary[dml_theta] ) ) - 1
+DML Lift Low %    = EXP ( MAX ( Summary[dml_ci_low] ) ) - 1
+DML Lift High %   = EXP ( MAX ( Summary[dml_ci_high] ) ) - 1
+Imputation Lift % = EXP ( MAX ( Summary[bjs_theta] ) ) - 1
+Permutation p-value = MAX ( Summary[p_att] )
+RMSPE Pre         = MAX ( Summary[rmspe_pre] )
+RMSPE Validation  = MAX ( Summary[rmspe_val] )
+RMSPE Ratio (post/pre) = MAX ( Summary[ratio] )
+Observed Uplift   = MAX ( Summary[delta_obs] )
+Estimator Lift %  = AVERAGE ( Estimators[lift_pct] )
+Estimator Low %   = IF ( ISBLANK ( MIN ( Estimators[ci_low] ) ), BLANK (), ( EXP ( MIN ( Estimators[ci_low] ) ) - 1 ) * 100 )
+Estimator High %  = IF ( ISBLANK ( MAX ( Estimators[ci_high] ) ), BLANK (), ( EXP ( MAX ( Estimators[ci_high] ) ) - 1 ) * 100 )
+Estimator Truth % = IF ( ISBLANK ( MAX ( Estimators[truth_log_pts] ) ), BLANK (), ( EXP ( MAX ( Estimators[truth_log_pts] ) ) - 1 ) * 100 )
+
+// ======================= 4 · SEGMENTS / CATE (folder: 4 Segments) ====================
+Segment Lift %    = AVERAGE ( SegmentEffect[lift_pct] )
+Segment Lift Low %  = AVERAGE ( SegmentEffect[lift_low_pct] )
+Segment Lift High % = AVERAGE ( SegmentEffect[lift_high_pct] )
+Segment Decision  = SELECTEDVALUE ( SegmentEffect[decision], "Multiple segments" )
+Decision Colour =
+    SWITCH ( [Segment Decision],
+             "Deploy", "#2CA02C", "Hold / A-B test", "#F2A900", "Do not deploy", "#D62728", "#7F7F7F" )
+Market CATE %     = ( EXP ( AVERAGE ( CateMarket[cate] ) ) - 1 ) * 100
+
+// ======================= 5 · WHAT-IF SIMULATOR (folder: 5 What-if) ===================
+Selected Uplift   = SELECTEDVALUE ( ParamUplift[Uplift], [Observed Uplift] )
+Selected Go-Live  = SELECTEDVALUE ( ParamGoLive[Week], [Focal Go-Live Week] )
+Selected Ramp     = SELECTEDVALUE ( ParamRamp[Weeks], 0 )
+// Effect-weighted CATE of the segment(s) chosen in the Segment slicer (all adopters if none chosen)
+Selected CATE =
+    DIVIDE ( SUMX ( SegmentEffect, SegmentEffect[cate] * SegmentEffect[n_markets] ),
+             SUM ( SegmentEffect[n_markets] ) )
+// Constant-elasticity scaling:  tau(delta) = tau_obs * ln(1+delta) / ln(1+delta_obs)
+Scenario Effect (log) = [Selected CATE] * DIVIDE ( LN ( 1 + [Selected Uplift] ), LN ( 1 + [Observed Uplift] ) )
+Scenario Effect % = EXP ( [Scenario Effect (log)] ) - 1
+Scenario Revenue =
+    VAR tau = [Scenario Effect (log)]
+    VAR gl  = [Selected Go-Live]
+    VAR r   = [Selected Ramp]
+    RETURN
+        SUMX (
+            VALUES ( DimDate[week_idx] ),
+            VAR w    = DimDate[week_idx]
+            VAR ramp = IF ( w < gl, 0, IF ( r = 0, 1, MIN ( 1, DIVIDE ( w - gl + 1, r ) ) ) )
+            RETURN CALCULATE ( SUM ( FactCounterfactual[counterfactual] ) ) * EXP ( tau * ramp )
+        )
+Scenario Incremental = [Scenario Revenue] - [Counterfactual Revenue]
+Scenario Incremental (from go-live) =
+    CALCULATE ( [Scenario Incremental], DimDate[week_idx] >= [Selected Go-Live] )
+Scenario Cumulative =
+    VAR w = MAX ( DimDate[week_idx] )
+    RETURN IF ( w < [Selected Go-Live], BLANK (),
+         CALCULATE ( [Scenario Incremental],
+                     FILTER ( ALLSELECTED ( DimDate[week_idx] ), DimDate[week_idx] >= [Selected Go-Live] && DimDate[week_idx] <= w ) ) )
+Extrapolation Warning =
+    IF ( ABS ( [Selected Uplift] - [Observed Uplift] ) > 0.05,
+         "⚠ Uplift is far from the observed " & FORMAT ( [Observed Uplift], "0.0%" ) & " — this is an extrapolation, not evidence.", "" )
+
+// ======================= 6 · ROBUSTNESS (folder: 6 Robustness) =======================
+Focal Placebo Gap = CALCULATE ( AVERAGE ( FactPlacebo[gap_log] ), FactPlacebo[is_focal] = TRUE () )
+Placebo Median =
+    MEDIANX ( CALCULATETABLE ( VALUES ( FactPlacebo[market_id] ), FactPlacebo[is_focal] = FALSE () ),
+              CALCULATE ( AVERAGE ( FactPlacebo[gap_log] ) ) )
+Placebo P10 =
+    PERCENTILEX.INC ( CALCULATETABLE ( VALUES ( FactPlacebo[market_id] ), FactPlacebo[is_focal] = FALSE () ),
+                      CALCULATE ( AVERAGE ( FactPlacebo[gap_log] ) ), 0.10 )
+Placebo P90 =
+    PERCENTILEX.INC ( CALCULATETABLE ( VALUES ( FactPlacebo[market_id] ), FactPlacebo[is_focal] = FALSE () ),
+                      CALCULATE ( AVERAGE ( FactPlacebo[gap_log] ) ), 0.90 )
+Robustness Value (RV) = CALCULATE ( MAX ( RobustnessValue[value] ), RobustnessValue[metric] = "RV: confounder strength to erase the estimate" )
+RV Gauge Target   = 0.05
+Refuter Shift = MAX ( Refuters[new_effect] ) - MAX ( Refuters[original] )
+Check Colour =
+    SWITCH ( SELECTEDVALUE ( ReviewChecklist[status] ), "PASS", "#2CA02C", "REVIEW", "#F2A900", "#7F7F7F" )
+Checks Passed = CALCULATE ( COUNTROWS ( ReviewChecklist ), ReviewChecklist[status] = "PASS" )
+Checks Total  = COUNTROWS ( ReviewChecklist )
+
+// ======================= 7 · SMART TITLES (folder: 7 Titles) =========================
+Headline =
+    "Dynamic pricing lifted revenue in " & [Focal Market] & " by " & FORMAT ( [Revenue Lift %], "+0.0%;-0.0%" ) &
+    " — " & FORMAT ( [Post Incremental], "#,0" ) & " extra revenue since week " & [Focal Go-Live Week]
+Segment Title =
+    "Revenue lift by income segment — " & IF ( HASONEVALUE ( SegmentEffect[income_tercile] ),
+        SELECTEDVALUE ( SegmentEffect[income_tercile] ) & ": " & [Segment Decision], "choose a segment to see the decision" )
+Scenario Title =
+    "Scenario: +" & FORMAT ( [Selected Uplift], "0%" ) & " price from week " & [Selected Go-Live] & " → " &
+    FORMAT ( [Scenario Effect %], "+0.0%;-0.0%" ) & " revenue"
+Honesty Note =
+    "Single-market p = " & FORMAT ( [Permutation p-value], "0.00" ) & " · hidden-confounder robustness value " &
+    FORMAT ( [Robustness Value (RV)], "0.0%" ) & " (low: a modest unmeasured confounder could erase the average effect)"
+
+// ======================= 8 · FIELD PARAMETER (Modeling > New parameter > Fields, or this DAX) ====
+Metric Picker = {
+    ( "Revenue",       NAMEOF ( [Total Revenue] ),          0 ),
+    ( "Units sold",    NAMEOF ( [Total Units] ),            1 ),
+    ( "Average price", NAMEOF ( [Avg Price] ),              2 ),
+    ( "Revenue index", NAMEOF ( [Revenue Index] ), 3 )
+}

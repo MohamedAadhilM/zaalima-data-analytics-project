@@ -1,0 +1,9 @@
+metric,value
+rows_transactions,4160
+rows_telemetry_raw,4185
+duplicates_removed,25
+missing_competitor_price,95
+outliers_winsorised,22
+panel_balanced,True
+n_markets,40
+n_weeks,104

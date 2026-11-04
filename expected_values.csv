@@ -1,0 +1,17 @@
+quantity,expected_value
+"Total revenue, all markets, all weeks",957101433.81
+"Focal actual revenue, post go-live",8928872.139999999
+"Focal counterfactual revenue, post go-live",8623646.7161393
+"Focal incremental revenue, post go-live",305225.42386069935
+Focal revenue lift % (post),3.53940083479376
+DML average lift %,2.6289926741737024
+Observed average price uplift %,10.35796313371774
+Markets total,40.0
+Treated markets,12.0
+Donors kept,19.0
+Donors dropped,9.0
+Placebo series (excl. focal),19.0
+What-if: high-income lift % at observed uplift,8.17698868555627
+"What-if: high-income incremental revenue at observed uplift, go-live 70",705154.6162610557
+What-if: high-income lift % at +15% uplift,11.790538303487187
+What-if: high-income incremental revenue at +15% uplift,1016774.36922382
